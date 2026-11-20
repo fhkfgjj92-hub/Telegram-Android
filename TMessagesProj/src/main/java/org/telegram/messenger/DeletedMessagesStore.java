@@ -1,6 +1,7 @@
 package org.telegram.messenger;
 
 import org.json.JSONObject;
+import org.telegram.tgnet.TLRPC;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -110,26 +111,25 @@ public class DeletedMessagesStore {
             String title = "Чат";
             try {
                 if (dialogId > 0) {
-                    TLRPC.User user = mc.getUser((int) dialogId);
+                    TLRPC.User user = mc.getUser(dialogId);
                     if (user != null) title = ContactsController.formatName(user.first_name, user.last_name);
-                } else {
-                    TLRPC.Chat chat = mc.getChat(-(int) dialogId);
-                    if (chat != null) title = chat.title;
+                } else if (dialogId < 0) {
+                    TLRPC.Chat chat = mc.getChat(-dialogId);
+                    if (chat != null && chat.title != null) title = chat.title;
                 }
             } catch (Throwable ignore) {}
 
             MessagesStorage ms = MessagesStorage.getInstance(currentAccount);
-            java.lang.reflect.Method getMessage;
+            java.lang.reflect.Method getMessage = null;
             try {
                 getMessage = MessagesStorage.class.getMethod("getMessage", long.class, int.class);
-            } catch (Throwable e) {
-                getMessage = null;
-            }
+            } catch (Throwable ignore) {}
             for (Integer mid : messageIds) {
+                if (mid == null) continue;
                 String text = null;
                 try {
                     if (getMessage != null) {
-                        Object msgObj = getMessage.invoke(ms, dialogId, mid);
+                        Object msgObj = getMessage.invoke(ms, dialogId, mid.intValue());
                         if (msgObj instanceof MessageObject) {
                             MessageObject msg = (MessageObject) msgObj;
                             text = msg.messageText != null ? msg.messageText.toString() : "(вложение)";
